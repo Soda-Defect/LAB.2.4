@@ -823,7 +823,31 @@ inline void MainWindowLazySequence::onGetElement()
     }
 
     try {
-        if (currentFibonacci && fibonacciMap.contains(currentName)) {
+        if (zippedMap.contains(currentName)) {
+            auto* zipped = zippedMap.value(currentName, nullptr);
+
+            if (!zipped) {
+                showMessage(
+                    QStringLiteral("Zipped-последовательность не найдена"),
+                    true);
+                return;
+            }
+
+            const auto value = zipped->Get(index);
+
+            showMessage(
+                QStringLiteral("Элемент [%1] = (%2, %3)")
+                    .arg(index)
+                    .arg(value.first)
+                    .arg(value.second));
+
+            updateCurrentDisplay();
+            return;
+        }
+
+        if (currentFibonacci &&
+            fibonacciMap.contains(currentName)) {
+
             const std::string value =
                 currentFibonacci->Get(index);
 
