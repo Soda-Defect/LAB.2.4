@@ -469,9 +469,6 @@ size_t ConcatGenerator<T>::knownCount() const {
 
     const size_t firstSize = first_->knownCount();
 
-    if (second_->isEndless())
-        return firstSize + second_->knownCount();
-
     return firstSize + second_->knownCount();
 }
 
