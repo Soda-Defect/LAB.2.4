@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <stdexcept>
@@ -127,7 +126,7 @@ private:
     std::shared_ptr<IGenerator<T>> source_;
     std::function<bool(const T&)> pred_;
 
-    mutable std::vector<T> matches_;
+    mutable ArraySequence<T> matches_;
     mutable size_t scanned_ = 0;
     mutable bool exhausted_ = false;
 
@@ -247,7 +246,7 @@ public:
 
 private:
     std::shared_ptr<IGenerator<T>> generator_;
-    mutable std::vector<T> memo_;
+    mutable ArraySequence<T> memo_;
 
     void ensureComputed(size_t index) const;
 };
@@ -255,14 +254,8 @@ private:
 template<typename T>
 class LazySequence<T>::Iterator {
 public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = T;
-    using difference_type = std::ptrdiff_t;
-    using pointer = void;
-    using reference = T;
-
     Iterator();
-    reference operator*() const;
+    T operator*() const;
     Iterator& operator++();
     Iterator operator++(int);
     bool operator==(const Iterator& other) const;
@@ -519,10 +512,10 @@ FilterGenerator<T>::FilterGenerator(std::shared_ptr<IGenerator<T>> source,
 
 template<typename T>
 void FilterGenerator<T>::scanUntil(size_t resultIndex) const {
-    if (resultIndex < matches_.size())
+    if (resultIndex < matches_.GetLength())
         return;
 
-    while (matches_.size() <= resultIndex) {
+    while (matches_.GetLength() <= resultIndex) {
         if (exhausted_)
             throw IndexOutOFBoundsException(
                 "FilterGenerator: index out of range");
@@ -531,7 +524,7 @@ void FilterGenerator<T>::scanUntil(size_t resultIndex) const {
             T value = source_->generate(scanned_);
             ++scanned_;
             if (pred_(value))
-                matches_.push_back(std::move(value));
+                matches_.Append(std::move(value));
         } catch (const IndexOutOFBoundsException&) {
             exhausted_ = true;
             throw IndexOutOFBoundsException(
@@ -551,7 +544,7 @@ void FilterGenerator<T>::scanAllFinite() const {
         T value = source_->generate(scanned_);
         ++scanned_;
         if (pred_(value))
-            matches_.push_back(std::move(value));
+            matches_.Append(std::move(value));
     }
 
     exhausted_ = true;
@@ -571,10 +564,10 @@ bool FilterGenerator<T>::isEndless() const {
 template<typename T>
 size_t FilterGenerator<T>::knownCount() const {
     if (source_->isEndless())
-        return matches_.size();
+        return matches_.GetLength();
 
     scanAllFinite();
-    return matches_.size();
+    return matches_.GetLength();
 }
 
 template<typename A, typename B>
@@ -765,7 +758,7 @@ std::shared_ptr<IGenerator<T>> LazySequence<T>::GetGenerator() const {
 
 template<typename T>
 size_t LazySequence<T>::ComputedCount() const {
-    return memo_.size();
+    return memo_.GetLength();
 }
 
 template<typename T>
@@ -773,9 +766,9 @@ void LazySequence<T>::ensureComputed(size_t index) const {
     if (index > static_cast<size_t>(std::numeric_limits<int>::max()))
         throw IndexOutOFBoundsException("LazySequence: index is too large");
 
-    while (memo_.size() <= index) {
-        const size_t nextIndex = memo_.size();
-        memo_.push_back(generator_->generate(nextIndex));
+    while (memo_.GetLength() <= index) {
+        const size_t nextIndex = memo_.GetLength();
+        memo_.Append(generator_->generate(nextIndex));
     }
 }
 
@@ -919,8 +912,7 @@ LazySequence<T>::Iterator::Iterator(const LazySequence* seq, size_t idx)
     : seq_(seq), index_(idx) {}
 
 template<typename T>
-typename LazySequence<T>::Iterator::reference
-LazySequence<T>::Iterator::operator*() const {
+T LazySequence<T>::Iterator::operator*() const {
     if (!seq_)
         throw std::logic_error("Dereferencing an invalid LazySequence iterator");
     return seq_->Get(index_);
