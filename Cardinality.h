@@ -9,15 +9,13 @@ public:
 
     enum Type {
         kFinite,
-        kCountableInfinity,
-        kContinuum
+        kCountableInfinity
     };
 
 
     Cardinality() : type_(kFinite), value_(0) {}
     Cardinality(size_t n) : type_(kFinite), value_(n) {}
     static Cardinality Countable() { return Cardinality(kCountableInfinity, 0); }
-    static Cardinality Continuum() { return Cardinality(kContinuum, 0); }
 
     // Геттеры
     Type GetType() const { return type_; }
@@ -30,8 +28,6 @@ public:
             return std::to_string(value_);
         case kCountableInfinity:
             return "ℵ₀";
-        case kContinuum:
-            return "𝔠 (континуум)";
         }
         return "?";
     }
@@ -56,8 +52,6 @@ public:
     Cardinality operator+(const Cardinality& other) const {
         if (type_ == kCountableInfinity || other.type_ == kCountableInfinity)
             return Cardinality::Countable();
-        if (type_ == kContinuum || other.type_ == kContinuum)
-            return Cardinality::Continuum();
         return Cardinality(value_ + other.value_);
     }
 
@@ -65,10 +59,8 @@ public:
     Cardinality operator*(const Cardinality& other) const {
         if (type_ == kFinite && other.type_ == kFinite)
             return Cardinality(value_ * other.value_);
-        if ((type_ == kCountableInfinity || other.type_ == kCountableInfinity) &&
-            type_ != kContinuum && other.type_ != kContinuum)
+        if (type_ == kCountableInfinity || other.type_ == kCountableInfinity)
             return Cardinality::Countable();
-        return Cardinality::Continuum();
     }
 
 private:
